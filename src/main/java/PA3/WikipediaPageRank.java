@@ -53,6 +53,7 @@ public class WikipediaPageRank {
                 break;
             default:
                 System.err.println("Unknown profile provided, using A1 as default");
+                profile = "A1";
                 break;
         }
         this.linksFile = linksFile;
@@ -81,7 +82,7 @@ public class WikipediaPageRank {
         //Step 1.5: Make "Wikipedia Bomb"
         if (wikipediaBomb) {
             //TODO: Create Wikipedia Bomb for "Rocky Mountain National Park"
-            //TODO: Filter for "Rocky Mountain National Park" and articles containing "surfing"?
+            //TODO: Filter for "Rocky Mountain National Park" and articles containing "surfing"
         }
         double numPages = titles.count();
         JavaPairRDD<String, Double> ranks = links.mapValues(v -> 1.0 / numPages).cache();
@@ -113,11 +114,11 @@ public class WikipediaPageRank {
             String title = titleList.get(id - 1);
             return new Tuple2<>(title, x._2);
         });
-        output = output.mapToPair(Tuple2::swap).sortByKey(false).mapToPair(Tuple2::swap).coalesce(1);
+        output = output.mapToPair(Tuple2::swap).sortByKey(false).mapToPair(Tuple2::swap);
         if (wikipediaBomb) {
             // TODO: Filter by Wikipedia Bomb?
         }
-        output.saveAsTextFile(outputFile);
+        output.coalesce(1).saveAsTextFile(outputFile);
     }
 
     public static void main(String[] args) throws Exception {
