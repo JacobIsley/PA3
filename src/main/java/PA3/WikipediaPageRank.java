@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 public class WikipediaPageRank {
 
     private static final double BETA = 0.85;
-    private static final Pattern SEMICOLON = Pattern.compile(": ");
+    private static final Pattern COLON = Pattern.compile(": ");
     private static final Pattern SPACE = Pattern.compile(" ");
     private static final int TOTALITERATIONS = 25;
 
@@ -76,13 +76,16 @@ public class WikipediaPageRank {
         JavaRDD<String> titles = spark.read().textFile(titlesFile).javaRDD().cache();
         JavaRDD<String> lines = spark.read().textFile(linksFile).javaRDD().cache();
         JavaPairRDD<String, String> links = lines.mapToPair(x -> {
-            String[] parts = SEMICOLON.split(x);
+            String[] parts = COLON.split(x);
             return new Tuple2<>(parts[0], parts[1]);
         }).cache();
         //Step 1.5: Make "Wikipedia Bomb"
         if (wikipediaBomb) {
-            //TODO: Create Wikipedia Bomb for "Rocky Mountain National Park"
-            //TODO: Filter for "Rocky Mountain National Park" and articles containing "surfing"
+            String wbId = Integer.toString(4290745);
+            JavaPairRDD<String, String> wbLines = titles.zipWithIndex().mapValues(v -> Long.toString(v + 1))
+                    .filter(s -> s._1.toLowerCase().contains("surfing"))
+                    .mapToPair(Tuple2::swap).mapValues(v -> wbId);
+            links = links.join(wbLines).mapValues(v -> v._1 + " " + v._2);
         }
         double numPages = titles.count();
         JavaPairRDD<String, Double> ranks = links.mapValues(v -> 1.0 / numPages).cache();
@@ -115,9 +118,6 @@ public class WikipediaPageRank {
             return new Tuple2<>(title, x._2);
         });
         output = output.mapToPair(Tuple2::swap).sortByKey(false).mapToPair(Tuple2::swap);
-        if (wikipediaBomb) {
-            // TODO: Filter by Wikipedia Bomb?
-        }
         output.coalesce(1).saveAsTextFile(outputFile);
     }
 
